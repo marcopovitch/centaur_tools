@@ -5,3 +5,5 @@
 /qemu
 /json
 
+# ringserver data
+/var/ringserver/packetbuf
