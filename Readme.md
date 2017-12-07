@@ -7,16 +7,24 @@
 Do not try *any* of all those dumb ideas you have/will read on this page. You have been warned.
 
 ## Context
-Centaur digitizer is a seismic acquisition system. It relies on a Linux operating system. It provides :
+[Centaur digitizer](https://www.nanometrics.ca/index.php/products/instrumentation/centaur-digital-recorder) is a seismic acquisition system. It relies on a Linux operating system. It provides :
 
-* real time data through seedlink protocol
-* file data archive following a standard data structure (SDS) named *Continuous Data Archive*.
+* real time data through [seedlink](http://www.seiscomp3.org/wiki/doc/applications/seedlink[]()) protocol
+* file data archive following a standard data structure ([SDS](https://www.seiscomp3.org/wiki/doc/applications/slarchive/SDS)) named *Continuous Data Archive* (with firmware >= 3.4.18).
 
-but unfortunately in the Continuous Data Archive *an extra miniseed blockette* is added at 00h00m00s but not in the miniseed data coming from Centaur seedlink server. Moreover for a given data packet the sequence number in the Continuous Data Archive file *is not the same* from the one comming from seedlink. The blockette Id is reseted to 0 at 00h00m00s in the Continuous Data Archive, whereas it is incremented in seedlink. This leads the data completion process (rsync in delta/differential mode) to transfert *all* data archive rather than only the missing data packet !
+##### Continuous Data Archive
+But unfortunately in the Continuous Data Archive *an extra miniseed blockette* is added at 00h00m00s but not in the miniseed data coming from Centaur seedlink server. Moreover for a given data packet the sequence number in the Continuous Data Archive file *is not the same* from the one comming from seedlink. The blockette Id is reseted to 0 at 00h00m00s in the Continuous Data Archive, whereas it is incremented in seedlink. This leads the data completion process (rsync in delta/differential mode) to transfert *all* data archive rather than only the missing data packet ! 
 
-The dump of the data packet comming from Centaur seedlink and from the Continuous Data Archive is just below :
+##### Centaur seedlink server
+Furthermore, different seedlink clients connected to the same Centaur seedlink server get same data packets (hopefully) **but** with different blockette Id.
 
-###### Data packet commming from Seedlink
+
+##### Data packet inspection
+The dump (using `msi` tool) of the data packets comming from Centaur seedlink server and from the Continuous Data Archive is just below :
+
+
+###### Data packet commming from Centaur seedlink server
+
 <pre>
 XX_GP003_00_HHZ, 019211, D, 512, 244 samples, 200 Hz, 2017,072,23:59:54.685000
    -1518       -1402       -1567       -1813       -1880       -1794
@@ -75,10 +83,10 @@ Do not forget to read the disclaimer section. The method presented here uses onl
 
 The idea is to :
 
-* replace fully the Centaur **Continuous Data Archive** process with `slarchive`
-* replace partly the Centaur **seedlink server** with `ringserser`.
+* replace *fully* the Centaur **Continuous Data Archive** process with `slarchive`
+* replace *partly* the Centaur **seedlink server** with `ringserser`.
 
-`slarchive` is used localy, on the Centaur itself (localhost:18000), to get real time data from the Centaur seedlink server. It generates mseed data file in a SDS directory (on `/media/removable0`). This SDS directory is used by `ringserver` to populate its own seedlink server (running on port 19000) which uses the same seedlink sequence number, allowing smart gaps recovering.
+`slarchive` is used localy, on the Centaur itself, to get real time data from the Centaur seedlink server (localhost:18000). It generates mseed data file in a SDS directory (on `/media/removable0`). This SDS directory is used by `ringserver` to populate its own seedlink server (running on port 19000) which uses the same seedlink sequence number for all clients, allowing smart gaps recovering.
 
 ![workflow](images/centaur.svg)
 
@@ -117,10 +125,16 @@ centaur_tools
         └── slarchive.statefile
 </pre>
 
-Copy all the `centaur_tools` repositoy into `root@centaur:/media/removable0/`
+### Where to install ?
+As a prof of concept, just copy all the `centaur_tools` repositoy into `root@centaur:/media/removable0/`.
+
+For permanent installation, it would be better to let the Centaur hosts all files (but SDS files !).
+Several issues have to be solved though, see the **To be done section** (feedbacks are welcome).
+
+
 
 ### Start centaur_tools acquisition
-Just run `/media/removable0/centaur_tools/scripts/start_acqui.sh`
+Look at `/media/removable0/centaur_tools/scripts/start_acqui.sh` to set up directories, then start it.
 
 ### Stop centaur_tools acquisition
 To be done, or kill the `slarchive` and `ringserser` processes.
@@ -132,24 +146,26 @@ in delta/differential mode, using `-B` or `--block-size` option, on the SDS dire
 **Warning**: since Centaur CPU is not so powerfull, it is *not* recommended to run `rsync` on the whole SDS directory. I will take HUGE time to compute and check each block size on each file! It is better to select, on datacenter side, one file (`$f`) at a time with gaps (using `msi` for example) and use rsync such as :
 
 <pre>
-rsync --inplace --checksum --bwlimit=1 -a -v \
-      -B 40960 --stats \
-	   --timeout=$TIMEOUT \                            \
-       -e "ssh -p $PORT" root@$centaur:/media/removable0/SDS/$f $TO/$f
+rsync --inplace --checksum  -a -v \
+      --stats --timeout=$TIMEOUT \                            \
+      -e "ssh -p $PORT" root@$centaur:/media/removable0/SDS/$f $TO/$f
 </pre>
 
 * `$PORT`: is the Centaur ssh port (default is 22)
 * `$TIMEOUT`: If no data is transferred for the specified time then rsync will exit
 * `$f`: gapped mseed file (*eg.* `2017/XX/GPIL/HHZ.D/XX.GPIL.00.HHZ.D.2017.291`)
 * `$TO`: mseed SDS path on the datacenter
+* for slow bandwidth use `--bwlimit` and `-B` rsync option.
 
 ### To be done 
 
-* start centaur_tools at system startup 
-* stop centaur_tools at system shutdown (generate/save state files) or to be able to eject removable media
-* think of a better place to host all thoses files ?
-* regulary check centaur_tools acquisition status (script + crontab)
-* uses Ansible to automatize deployment/upgrade/status
+* start centaur_tools at system startup,
+* stop centaur_tools at system shutdown (generate/save state files to restart with a recovering state),
+* regulary check centaur_tools acquisition health/status and space used by SDS directory (script + crontab),
+* uses Ansible to automatize deployment/upgrade/status,
+* patch the *media eject script* to properly shutdown slarchive and ringserver processes (allow them to write state files), and restart acquisition after media insertion,
+*  manage the double partition scheme.
+
 
 ## Centaur information
 
