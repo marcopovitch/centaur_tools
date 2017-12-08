@@ -13,14 +13,14 @@ Do not try *any* of all those dumb ideas you have/will read on this page. You ha
 * file data archive following a standard data structure ([SDS](https://www.seiscomp3.org/wiki/doc/applications/slarchive/SDS)) named *Continuous Data Archive* (with firmware >= 3.4.18).
 
 ##### Continuous Data Archive
-But unfortunately in the Continuous Data Archive *an extra miniseed blockette* is added at 00h00m00s but not in the miniseed data coming from Centaur seedlink server. Moreover for a given data packet the sequence number in the Continuous Data Archive file *is not the same* from the one comming from seedlink. The blockette Id is reseted to 0 at 00h00m00s in the Continuous Data Archive, whereas it is incremented in seedlink. This leads the data completion process (rsync in delta/differential mode) to transfert *all* data archive rather than only the missing data packet ! 
+But unfortunately in the Continuous Data Archive *an extra miniseed blockette* is added at 00h00m00s but not in the miniseed data coming from Centaur seedlink server. Moreover for a given data packet the sequence number in the Continuous Data Archive file *is not the same* from the one comming from seedlink. The blockette Id is reseted to 000001 at 00h00m00s in the Continuous Data Archive, whereas it is incremented for seedlink client. This leads the data completion process (rsync in delta/differential mode) to transfert *all* data archive rather than only the missing data packet ! 
 
 ##### Centaur seedlink server
-Furthermore, different seedlink clients connected to the same Centaur seedlink server get same data packets (hopefully) **but** with different blockette Id.
+Furthermore, different seedlink clients connected to the same Centaur seedlink server get same data packets (hopefully) **but** with different blockette Id. The first data packet received by client has a blockette Id set to 00001.
 
 
 ##### Data packet inspection
-The dump (using `msi` tool) of the data packets comming from Centaur seedlink server and from the Continuous Data Archive is just below :
+The [msi](https://github.com/iris-edu/msi) tool was used (using `msi -d`) to dump the data packets comming from *Centaur seedlink server* and from the *Continuous Data Archive*.
 
 
 ###### Data packet commming from Centaur seedlink server
@@ -83,8 +83,8 @@ Do not forget to read the disclaimer section. The method presented here uses onl
 
 The idea is to :
 
-* replace *fully* the Centaur **Continuous Data Archive** process with `slarchive`
-* replace *partly* the Centaur **seedlink server** with `ringserser`.
+* replace *fully* the Centaur **Continuous Data Archive** process with `slarchive` -- or `slinktool` -- (link on [IRIS](https://ds.iris.edu/ds/nodes/dmc/software/downloads/slarchive/)),
+* replace *partly* the Centaur **seedlink server** with `ringserser` (link on [github project](https://github.com/iris-edu/ringserver)).
 
 `slarchive` is used localy, on the Centaur itself, to get real time data from the Centaur seedlink server (localhost:18000). It generates mseed data file in a SDS directory (on `/media/removable0`). This SDS directory is used by `ringserver` to populate its own seedlink server (running on port 19000) which uses the same seedlink sequence number for all clients, allowing smart gaps recovering.
 
@@ -129,15 +129,13 @@ centaur_tools
 As a prof of concept, just copy all the `centaur_tools` repositoy into `root@centaur:/media/removable0/`.
 
 For permanent installation, it would be better to let the Centaur hosts all files (but SDS files !).
-Several issues have to be solved though, see the **To be done section** (feedbacks are welcome).
-
-
+Several issues have to be solved though, see the [To be done section]() (feedbacks are welcome).
 
 ### Start centaur_tools acquisition
 Look at `/media/removable0/centaur_tools/scripts/start_acqui.sh` to set up directories, then start it.
 
 ### Stop centaur_tools acquisition
-To be done, or kill the `slarchive` and `ringserser` processes.
+See the [To be done section](), or kill the `slarchive` and `ringserser` processes.
 
 ### Data recovery with rsync
 To recover missing data at the datacenter (mainly due to network outage) use rsync 
@@ -155,16 +153,21 @@ rsync --inplace --checksum  -a -v \
 * `$TIMEOUT`: If no data is transferred for the specified time then rsync will exit
 * `$f`: gapped mseed file (*eg.* `2017/XX/GPIL/HHZ.D/XX.GPIL.00.HHZ.D.2017.291`)
 * `$TO`: mseed SDS path on the datacenter
-* for slow bandwidth use `--bwlimit` and `-B` rsync option.
 
-### To be done 
+### To be done ... work in progress
 
-* start centaur_tools at system startup,
-* stop centaur_tools at system shutdown (generate/save state files to restart with a recovering state),
-* regulary check centaur_tools acquisition health/status and space used by SDS directory (script + crontab),
-* uses Ansible to automatize deployment/upgrade/status,
-* patch the *media eject script* to properly shutdown slarchive and ringserver processes (allow them to write state files), and restart acquisition after media insertion,
-*  manage the double partition scheme.
+* start and stop centaur_tools at system startup/shutdown :
+	* default Centaur runlevel is 5
+	* add script to `/etc/rc5.d`
+	* resume previous state
+* regulary check centaur_tools acquisition (script + crontab) :
+	* health/status
+	* cleanup space used by SDS directory,
+* uses [Ansible](https://www.ansible.com/application-deployment) to automatize deployment, upgrade, status monitoring, 
+* patch the *media eject script* to properly stop/restart slarchive and ringserver processes to allow them to 'write to'/'resume from' state files, and restart acquisition after media insertion. See :
+	*  `/etc/init.d/usb-eject-button-daemon`, 
+	*  `/usr/lib/nanometrics/startstop_utils`
+*  centaur_tools installation : manage the double partition scheme.
 
 
 ## Centaur information
