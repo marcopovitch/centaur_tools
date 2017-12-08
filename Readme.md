@@ -9,7 +9,7 @@ Do not try *any* of all those dumb ideas you have/will read on this page. You ha
 ## Context
 [Centaur digitizer](https://www.nanometrics.ca/index.php/products/instrumentation/centaur-digital-recorder) is a seismic acquisition system. It relies on a Linux operating system. It provides :
 
-* real time data through [seedlink](http://www.seiscomp3.org/wiki/doc/applications/seedlink[]()) protocol
+* real time data through [seedlink](http://www.seiscomp3.org/wiki/doc/applications/seedlink) protocol
 * file data archive following a standard data structure ([SDS](https://www.seiscomp3.org/wiki/doc/applications/slarchive/SDS)) named *Continuous Data Archive* (with firmware >= 3.4.18).
 
 ##### Continuous Data Archive
