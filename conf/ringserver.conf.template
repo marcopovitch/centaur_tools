@@ -43,7 +43,7 @@ DataLinkPort 16000
 # can be specified multiple times to listen for SeedLink connections
 # on multiple ports.
 
-SeedLinkPort 19000
+SeedLinkPort 18000
 
 
 # Specify the Server ID as reported to the clients.  The parameter may

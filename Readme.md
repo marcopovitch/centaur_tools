@@ -86,7 +86,7 @@ The idea is to :
 * replace *fully* the Centaur **Continuous Data Archive** process with `slarchive` -- or `slinktool` -- (link on [IRIS](https://ds.iris.edu/ds/nodes/dmc/software/downloads/slarchive/)),
 * replace *partly* the Centaur **seedlink server** with `ringserser` (link on [github project](https://github.com/iris-edu/ringserver)).
 
-`slarchive` is used localy, on the Centaur itself, to get real time data from the Centaur seedlink server (localhost:18000). It generates mseed data file in a SDS directory (on `/media/removable0`). This SDS directory is used by `ringserver` to populate its own seedlink server (running on port 19000) which uses the same seedlink sequence number for all clients, allowing smart gaps recovering.
+`slarchive` is used localy, on the Centaur itself, to get real time data from the Centaur seedlink server (localhost:19000). It generates mseed data file in a SDS directory (on `/media/removable0`). This SDS directory is used by `ringserver` to populate its own seedlink server (running on port 18000) which uses the same seedlink sequence number for all clients, allowing smart gaps recovering.
 
 ![workflow](images/centaur.svg)
 

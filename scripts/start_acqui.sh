@@ -28,7 +28,7 @@ echo "Starting acquisition for $NET_STA"
 $CENTAUR_DIR/bin/slarchive \
     -SDS $SDS_DIR \
     -S "$NET_STA:???.D" \
-    -x $VAR_DIR/slarchive/slarchive.statefile:120 localhost:18000 \
+    -x $VAR_DIR/slarchive/slarchive.statefile:120 localhost:19000 \
 > $LOG_DIR/slarchive.log 2>&1 &
 
 
