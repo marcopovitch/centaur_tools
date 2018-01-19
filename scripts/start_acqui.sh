@@ -16,8 +16,8 @@ mkdir -p $SDS_DIR
 mkdir -p $LOG_DIR
 mkdir -p $VAR_DIR
 
-mkdir -p $VAR_DIR/ring
-mkdir -p $VAR_DIR/ring/tlog
+mkdir -p $VAR_DIR/ringserver
+mkdir -p $VAR_DIR/ringserver/tlog
 mkdir -p $VAR_DIR/slarchive
 
 # get from Centaur the network code and station code
